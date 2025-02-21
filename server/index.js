@@ -43,7 +43,7 @@ app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'))
 // creating the login to deliver the token 
 const isLoggedIn = async(req, res, next)=> {
   try {
-    req.user = await findUserByToken(req.headers.authorization);
+    req.user = await findUseWithToken(req.headers.authorization);
     next();
   }
   catch(ex){
@@ -81,7 +81,7 @@ app.get('/api/users', async(req, res, next)=> {
 });
 
 // fetching the favorites 
-app.get('/api/users/:id/favorites', async(req, res, next)=> {
+app.get('/api/users/:id/favorites', authenticateToken async(req, res, next)=> {
   try {
     res.send(await fetchFavorites(req.params.id));
   }
