@@ -13,7 +13,26 @@ const {
 } = require('./db');
 const express = require('express');
 const app = express();
+const port = process.env.PORT || 3000;
+const jwt = require('jsonwebtoken');
+
+//MIDDLEWARE 
 app.use(express.json());
+
+//JWT for Middleware 
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  if (!token) return res.sendStatus(401);
+
+  jwt.verify(token, JWT, (err, user) => {
+    if (err) return res.sendStatus(403);
+    req.user = user;
+    next();
+  });
+};
+
+
 
 //for deployment only
 const path = require('path');
@@ -21,6 +40,18 @@ app.get('/', (req, res)=> res.sendFile(path.join(__dirname, '../client/dist/inde
 app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'))); 
 
 
+// creating the login to deliver the token 
+const isLoggedIn = async(req, res, next)=> {
+  try {
+    req.user = await findUserByToken(req.headers.authorization);
+    next();
+  }
+  catch(ex){
+    next(ex);
+  }
+};
+
+// routes for toking 
 app.post('/api/auth/login', async(req, res, next)=> {
   try {
     res.send(await authenticate(req.body));
@@ -30,6 +61,7 @@ app.post('/api/auth/login', async(req, res, next)=> {
   }
 });
 
+// routes for authentication 
 app.get('/api/auth/me', async(req, res, next)=> {
   try {
     res.send(await findUserWithToken(req.headers.authorization));
@@ -38,7 +70,7 @@ app.get('/api/auth/me', async(req, res, next)=> {
     next(ex);
   }
 });
-
+// fetch users 
 app.get('/api/users', async(req, res, next)=> {
   try {
     res.send(await fetchUsers());
@@ -48,6 +80,7 @@ app.get('/api/users', async(req, res, next)=> {
   }
 });
 
+// fetching the favorites 
 app.get('/api/users/:id/favorites', async(req, res, next)=> {
   try {
     res.send(await fetchFavorites(req.params.id));
@@ -56,7 +89,7 @@ app.get('/api/users/:id/favorites', async(req, res, next)=> {
     next(ex);
   }
 });
-
+// 
 app.post('/api/users/:id/favorites', async(req, res, next)=> {
   try {
     res.status(201).send(await createFavorite({ user_id: req.params.id, product_id: req.body.product_id}));
