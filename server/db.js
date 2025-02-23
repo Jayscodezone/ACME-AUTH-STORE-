@@ -3,7 +3,7 @@ const client = new pg.Client(process.env.DATABASE_URL || 'postgres://janayacoope
 const uuid = require('uuid');
 const bcrypt = require('bcrypt');
 const jwt = require("jsonwebtoken");
-const JWT = process.env.JWT || "supersecretkey";
+const JWT = process.env.JWT_SECRET 
 
 // creating the tables 
 const createTables = async()=> {
@@ -11,14 +11,15 @@ const createTables = async()=> {
     DROP TABLE IF EXISTS favorites;
     DROP TABLE IF EXISTS users;
     DROP TABLE IF EXISTS products;
+    
     CREATE TABLE users(
       id UUID PRIMARY KEY,
       username VARCHAR(20) UNIQUE NOT NULL,
-      password VARCHAR(255) NOT NULL
+      password VARCHAR(60) NOT NULL
     );
     CREATE TABLE products(
       id UUID PRIMARY KEY,
-      name VARCHAR(20)
+      name VARCHAR(100) NOT NULL UNIQUE
     );
     CREATE TABLE favorites(
       id UUID PRIMARY KEY,
@@ -120,11 +121,11 @@ const fetchProducts = async()=> {
 };
 
 // creating the favorites 
-const createFavorite = async({ user_id, product_id, favorite_id})=> {
+const createFavorite = async({ user_id, product_id,})=> {
   const SQL = `
     INSERT INTO favorites(id, user_id, product_id) VALUES($1, $2, $3) RETURNING *
   `;
-  const response = await client.query(SQL, [uuid.v4(), user_id, product_id, favorite_id]);
+  const response = await client.query(SQL, [uuid.v4(), user_id, product_id]);
   return response.rows[0];
 };
 

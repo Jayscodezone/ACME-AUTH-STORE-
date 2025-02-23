@@ -13,24 +13,23 @@ const {
 } = require('./db');
 const express = require('express');
 const app = express();
-const port = process.env.PORT || 3000;
-const jwt = require('jsonwebtoken');
+
 
 //MIDDLEWARE 
 app.use(express.json());
 
-//JWT for Middleware 
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.sendStatus(401);
+// //JWT for Middleware 
+// const authenticateToken = (req, res, next) => {
+//   const authHeader = req.headers['authorization'];
+//   const token = authHeader && authHeader.split(' ')[1];
+//   if (!token) return res.sendStatus(401);
 
-  jwt.verify(token, JWT, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
-};
+//   jwt.verify(token, JWT, (err, user) => {
+//     if (err) return res.sendStatus(403);
+//     req.user = user;
+//     next();
+//   });
+// };
 
 
 
@@ -43,7 +42,7 @@ app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'))
 // creating the login to deliver the token 
 const isLoggedIn = async(req, res, next)=> {
   try {
-    req.user = await findUseWithToken(req.headers.authorization);
+    req.user = await findUserWithToken(req.headers.authorization);
     next();
   }
   catch(ex){
@@ -70,6 +69,9 @@ app.get('/api/auth/me', async(req, res, next)=> {
     next(ex);
   }
 });
+
+// backend 
+
 // fetch users 
 app.get('/api/users', async(req, res, next)=> {
   try {
@@ -81,8 +83,13 @@ app.get('/api/users', async(req, res, next)=> {
 });
 
 // fetching the favorites 
-app.get('/api/users/:id/favorites', authenticateToken async(req, res, next)=> {
+app.get('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
   try {
+    if(req.params.id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
     res.send(await fetchFavorites(req.params.id));
   }
   catch(ex){
@@ -90,17 +97,31 @@ app.get('/api/users/:id/favorites', authenticateToken async(req, res, next)=> {
   }
 });
 // 
-app.post('/api/users/:id/favorites', async(req, res, next)=> {
+app.post('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
   try {
+    if(req.params.id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
     res.status(201).send(await createFavorite({ user_id: req.params.id, product_id: req.body.product_id}));
   }
   catch(ex){
     next(ex);
   }
+  app.use((err, req, res, next)=> {
+    console.log(err);
+    res.status(err.status || 500).send({ error: err.message || err });
+  });
 });
 
-app.delete('/api/users/:user_id/favorites/:id', async(req, res, next)=> {
+app.delete('/api/users/:user_id/favorites/:id',isLoggedIn,  async(req, res, next)=> {
   try {
+    if(req.params.userId !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
     await destroyFavorite({user_id: req.params.user_id, id: req.params.id });
     res.sendStatus(204);
   }
@@ -124,7 +145,7 @@ app.use((err, req, res, next)=> {
 });
 
 const init = async()=> {
-  const port = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 3000;
   await client.connect();
   console.log('connected to database');
 
@@ -142,12 +163,32 @@ const init = async()=> {
     createProduct({ name: 'quq' }),
     createProduct({ name: 'fip' })
   ]);
-
+// base code 
   console.log(await fetchUsers());
   console.log(await fetchProducts());
 
-  console.log(await fetchFavorites(moe.id));
+  const userProducts = await Promise.all ([
+    createFavorite ({user_id:moe.id,product_id: foo.id}),
+    createFavorite ({user_id:moe.id, product_id:bazz.id}),
+    createFavorite ({user_id:lucy.id, product_id:bar.id}),
+    createFavorite ({user_id:lucy.id, product_id:fip.id}),
+    createFavorite ({user_id:ethyl.id, product_id:bazz.id}),
+    createFavorite ({user_id:ethyl.id, product_id:quq.id}),
+    createFavorite ({user_id:curly.id, product_id:foo.id}),
+    createFavorite ({user_id:curly.id, product_id:quq.id}),
+    
+  ])
+  
+// base code 
+console.log(await fetchFavorites(moe.id));
   const favorite = await createFavorite({ user_id: moe.id, product_id: foo.id });
+  await deleteFavorite({ user_id: moe.id, id: userSkills[0].id});
+  console.log(await fetchFavorites(moe.id));
+
+  console.log('data seeded');
+
+
+  //listening on port 3000- Const port added at the top 
   app.listen(port, ()=> console.log(`listening on port ${port}`));
 };
 
