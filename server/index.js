@@ -9,48 +9,48 @@ const {
   fetchFavorites,
   destroyFavorite,
   authenticate,
-  findUserWithToken
+  findUserWithToken,
 } = require('./db');
 const express = require('express');
 const app = express();
-
-
+const path = require('path');
+// Load environment variables from .env file
+require('dotenv').config();
 //MIDDLEWARE 
 app.use(express.json());
 
 // //JWT for Middleware 
 // const authenticateToken = (req, res, next) => {
 //   const authHeader = req.headers['authorization'];
-//   const token = authHeader && authHeader.split(' ')[1];
-//   if (!token) return res.sendStatus(401);
+//    const token = authHeader && authHeader.split(' ')[1];
+//   if (!token) return res.sendStatus(401).json({ error: 'Access denied. No token provided.' });
 
-//   jwt.verify(token, JWT, (err, user) => {
-//     if (err) return res.sendStatus(403);
+
+//    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+//     if (err) return res.sendStatus(403).json({ error: 'Invalid token.' });
 //     req.user = user;
-//     next();
+//    next();
 //   });
-// };
-
-
+//  };
 
 //for deployment only
-const path = require('path');
+
 app.get('/', (req, res)=> res.sendFile(path.join(__dirname, '../client/dist/index.html')));
 app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'))); 
 
-
-// creating the login to deliver the token 
-const isLoggedIn = async(req, res, next)=> {
+ //creating the login to deliver the token 
+ const isLoggedIn = async(req, res, next)=> {
   try {
     req.user = await findUserWithToken(req.headers.authorization);
-    next();
+   next();
   }
   catch(ex){
-    next(ex);
+   next(ex);
   }
-};
+ };
 
-// routes for toking 
+// routes for login and auth
+
 app.post('/api/auth/login', async(req, res, next)=> {
   try {
     res.send(await authenticate(req.body));
@@ -61,18 +61,26 @@ app.post('/api/auth/login', async(req, res, next)=> {
 });
 
 // routes for authentication 
-app.get('/api/auth/me', async(req, res, next)=> {
+app.get('/api/auth/me', isLoggedIn, async(req, res, next)=> {
   try {
-    res.send(await findUserWithToken(req.headers.authorization));
+    res.send(req.user);
+    // res.send(await findUserWithToken(req.headers.authorization));
+  }
+  catch(ex){
+    next(ex);
+  }
+});
+// get products
+app.get('/api/products', async(req, res, next)=> {
+  try {
+    res.send(await fetchProducts());
   }
   catch(ex){
     next(ex);
   }
 });
 
-// backend 
-
-// fetch users 
+// get users 
 app.get('/api/users', async(req, res, next)=> {
   try {
     res.send(await fetchUsers());
@@ -96,25 +104,7 @@ app.get('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
     next(ex);
   }
 });
-// 
-app.post('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
-  try {
-    if(req.params.id !== req.user.id){
-      const error = Error('not authorized');
-      error.status = 401;
-      throw error;
-    }
-    res.status(201).send(await createFavorite({ user_id: req.params.id, product_id: req.body.product_id}));
-  }
-  catch(ex){
-    next(ex);
-  }
-  app.use((err, req, res, next)=> {
-    console.log(err);
-    res.status(err.status || 500).send({ error: err.message || err });
-  });
-});
-
+// delete favorites
 app.delete('/api/users/:user_id/favorites/:id',isLoggedIn,  async(req, res, next)=> {
   try {
     if(req.params.userId !== req.user.id){
@@ -130,25 +120,29 @@ app.delete('/api/users/:user_id/favorites/:id',isLoggedIn,  async(req, res, next
   }
 });
 
-app.get('/api/products', async(req, res, next)=> {
+app.post('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
   try {
-    res.send(await fetchProducts());
+    if(req.params.id !== req.user.id){
+      const error = Error('not authorized');
+      error.status = 401;
+      throw error;
+    }
+    res.status(201).send(await createFavorite({ user_id: req.params.id, product_id: req.body.product_id}));
   }
   catch(ex){
     next(ex);
   }
+  //error handeling middlware
+  app.use((err, req, res, next)=> {
+    console.log(err);
+    res.status(err.status || 500).send({ error: err.message || err });
+  });
 });
 
-app.use((err, req, res, next)=> {
-  console.log(err);
-  res.status(err.status || 500).send({ error: err.message ? err.message : err });
-});
-
+// initializing an seeding database
 const init = async()=> {
-  const PORT = process.env.PORT || 3000;
   await client.connect();
   console.log('connected to database');
-
   await createTables();
   console.log('tables created');
 
@@ -164,32 +158,18 @@ const init = async()=> {
     createProduct({ name: 'fip' })
   ]);
 // base code 
-  console.log(await fetchUsers());
-  console.log(await fetchProducts());
-
-  const userProducts = await Promise.all ([
-    createFavorite ({user_id:moe.id,product_id: foo.id}),
-    createFavorite ({user_id:moe.id, product_id:bazz.id}),
-    createFavorite ({user_id:lucy.id, product_id:bar.id}),
-    createFavorite ({user_id:lucy.id, product_id:fip.id}),
-    createFavorite ({user_id:ethyl.id, product_id:bazz.id}),
-    createFavorite ({user_id:ethyl.id, product_id:quq.id}),
-    createFavorite ({user_id:curly.id, product_id:foo.id}),
-    createFavorite ({user_id:curly.id, product_id:quq.id}),
-    
-  ])
+ console.log(await fetchUsers());
+ console.log(await fetchProducts());
   
-// base code 
-console.log(await fetchFavorites(moe.id));
-  const favorite = await createFavorite({ user_id: moe.id, product_id: foo.id });
-  await deleteFavorite({ user_id: moe.id, id: userSkills[0].id});
-  console.log(await fetchFavorites(moe.id));
-
-  console.log('data seeded');
+ console.log(await fetchFavorites(moe.id));
+ const favorite = await createFavorite({ user_id: moe.id, product_id: foo.id });
+ await deleteFavorite({ user_id: moe.id, id: userSkills[0].id});
+ console.log(await fetchFavorites(moe.id));
 
 
-  //listening on port 3000- Const port added at the top 
-  app.listen(port, ()=> console.log(`listening on port ${port}`));
+  //listening on port 3000
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, ()=> console.log(`listening on port ${PORT}`));
 };
 
 init();
