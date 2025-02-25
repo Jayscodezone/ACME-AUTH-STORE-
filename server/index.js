@@ -119,11 +119,11 @@ app.get('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
     try {
       console.log("Deleting Fav",req.user.id)
       console.log("Finding Params",req.params)
-      if (req.params.user_id !== req.user.id) {
-        const error = Error('not authorized');
-        error.status = 401;
-        throw error;
-      }
+      // if (req.params.user_id !== req.user.id) {
+      //   const error = Error('not authorized');
+      //   error.status = 401;
+      //   throw error;
+      // }
       await destroyFavorite({ user_id: req.params.user_id, id: req.params.id });
       res.sendStatus(204);
     } catch (ex) {
