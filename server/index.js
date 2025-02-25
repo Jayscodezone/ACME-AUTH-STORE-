@@ -99,6 +99,25 @@ app.get('/api/users', async(req, res, next)=> {
     next(ex);
   }
 });
+// new route for registration 
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    res.status(201).send(await createUser(req.body));
+  } catch (ex) {
+    next(ex);
+  }
+});
+  //   const user = await registerUser(req.body);
+
+  //   res.status(201).json({
+  //     message: "User registered successfully",
+  //     userId: user.id,
+  //   });
+  // } catch (error) {
+  //   console.error("Registration error:", error);
+  //   res.status(500).json({ error: "Internal server error" });
+  // }
+// });
 
 // fetching the favorites 
 app.get('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
