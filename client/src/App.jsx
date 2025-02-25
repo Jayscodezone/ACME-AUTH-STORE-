@@ -56,7 +56,14 @@ function App() {
 
   useEffect(()=> {
     const fetchFavorites = async()=> {
-      const response = await fetch(`/api/users/${auth.id}/favorites`);
+      const token = localStorage.getItem("token")
+      const response = await fetch(`/api/users/${auth.id}/favorites`,{
+        headers:{"Content-Type": "application/json", 
+          "Authorization": `${token}`
+        }
+
+
+      });
       const json = await response.json();
       if(response.ok){
         setFavorites(json);
@@ -77,9 +84,11 @@ function App() {
       headers: {
         'Content-Type': 'application/json'
       }
+      
     });
-
+// console.log("response", response);
     const json = await response.json();
+    console.log("hello", json);
     if(response.ok){
       window.localStorage.setItem('token', json.token);
       attemptLoginWithToken();
@@ -90,11 +99,13 @@ function App() {
   };
 
   const addFavorite = async(product_id)=> {
+    const token = localStorage.getItem("token");
     const response = await fetch(`/api/users/${auth.id}/favorites`, {
       method: 'POST',
       body: JSON.stringify({ product_id }),
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `${token}`
       }
     });
 

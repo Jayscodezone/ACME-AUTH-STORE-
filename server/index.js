@@ -33,6 +33,7 @@ app.use(express.json());
 //   });
 //  };
 
+
 //for deployment only
 
 app.get('/', (req, res)=> res.sendFile(path.join(__dirname, '../client/dist/index.html')));
@@ -40,20 +41,29 @@ app.use('/assets', express.static(path.join(__dirname, '../client/dist/assets'))
 
  //creating the login to deliver the token 
  const isLoggedIn = async(req, res, next)=> {
-  try {
-    req.user = await findUserWithToken(req.headers.authorization);
-   next();
-  }
-  catch(ex){
-   next(ex);
-  }
- };
+    try {
+      const token = req.headers.authorization;
+      if (!token) {
+        const error = Error("not authorized");
+        error.status = 401;
+        throw error;
+      }
+      req.user = await findUserWithToken(token);
+      next();
+    } catch (ex) {
+      next(ex);
+    }
+  };
 
 // routes for login and auth
 
 app.post('/api/auth/login', async(req, res, next)=> {
   try {
-    res.send(await authenticate(req.body));
+    const checkIn = await authenticate(req.body)
+    console.log (checkIn);
+    console.log("authenticate", await authenticate(req.body));
+    // res.status(201).send(checkIn.token);
+   res.send(await authenticate(req.body));
   }
   catch(ex){
     next(ex);
@@ -105,22 +115,24 @@ app.get('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
   }
 });
 // delete favorites
-app.delete('/api/users/:user_id/favorites/:id',isLoggedIn,  async(req, res, next)=> {
-  try {
-    if(req.params.userId !== req.user.id){
-      const error = Error('not authorized');
-      error.status = 401;
-      throw error;
+  app.delete('/api/users/:user_id/favorites/:id', isLoggedIn, async (req, res, next) => {
+    try {
+      console.log("Deleting Fav",req.user.id)
+      console.log("Finding Params",req.params)
+      if (req.params.user_id !== req.user.id) {
+        const error = Error('not authorized');
+        error.status = 401;
+        throw error;
+      }
+      await destroyFavorite({ user_id: req.params.user_id, id: req.params.id });
+      res.sendStatus(204);
+    } catch (ex) {
+      next(ex);
     }
-    await destroyFavorite({user_id: req.params.user_id, id: req.params.id });
-    res.sendStatus(204);
-  }
-  catch(ex){
-    next(ex);
-  }
-});
-
+  });
 app.post('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
+  console.log("Moe is here", req.user.id);
+  console.log(req.params.id);
   try {
     if(req.params.id !== req.user.id){
       const error = Error('not authorized');
@@ -132,12 +144,7 @@ app.post('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
   catch(ex){
     next(ex);
   }
-  //error handeling middlware
-  app.use((err, req, res, next)=> {
-    console.log(err);
-    res.status(err.status || 500).send({ error: err.message || err });
-  });
-});
+})
 
 // initializing an seeding database
 const init = async()=> {
@@ -163,8 +170,10 @@ const init = async()=> {
   
  console.log(await fetchFavorites(moe.id));
  const favorite = await createFavorite({ user_id: moe.id, product_id: foo.id });
- await deleteFavorite({ user_id: moe.id, id: userSkills[0].id});
- console.log(await fetchFavorites(moe.id));
+//  await deleteFavorite({ user_id: moe.id, id: userSkills[0].id});
+//  console.log(await fetchFavorites(moe.id));
+
+
 
 
   //listening on port 3000
@@ -172,5 +181,4 @@ const init = async()=> {
   app.listen(PORT, ()=> console.log(`listening on port ${PORT}`));
 };
 
-init();
-
+init()
