@@ -24,8 +24,8 @@ const Register = ({ register, regErr, setRegErr }) => {
   const [password, setPassword] = useState("");
  
   const submit = (ev) => {
-    if (password.length < 8){
-      setTimeout(() => setRegErr("Password must be at least 8 characters."), 3000);
+    if (password.length < 4){
+      setTimeout(() => setRegErr("Password must be at least 4 characters."), 3000);
     }
     ev.preventDefault();
     register({ username, password });
