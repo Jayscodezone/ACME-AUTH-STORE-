@@ -35,10 +35,10 @@ const Register = ({ register, regErr, setRegErr }) => {
     <form onSubmit={submit}>
       <input value={username} placeholder="username" onChange={(ev) => setUsername(ev.target.value)}
       />
-      <input value={password} placeholder="password" onChange={(ev) => setPassword(ev.target.value)} minLength={8}
+      <input value={password} placeholder="password" onChange={(ev) => setPassword(ev.target.value)} minLength={4}
       />
       <ul>
-        <li>Password must contain at least 8 characters.</li>
+        <li>Password must contain at least 4 characters.</li>
       </ul>
       {regErr && <p className="error-msg">{regErr}</p>}
       <button disabled={!username || !password}>Register</button>
