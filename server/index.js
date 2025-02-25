@@ -107,7 +107,7 @@ app.post("/api/auth/register", async (req, res) => {
 //     next(ex);
 //   }
 // });
-     const user = await registerUser(req.body);
+     const user = await createUser(req.body);
 
     res.status(201).json({
       message: "User registered successfully",
@@ -165,7 +165,7 @@ app.post('/api/users/:id/favorites', isLoggedIn, async(req, res, next)=> {
   }
 })
 // error handling 
-app.use(( req, res, next) => {
+app.use(( err,req, res, next) => {
   console.log(err);
   res
     .status(err.status || 500)

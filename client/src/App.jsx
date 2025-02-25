@@ -24,10 +24,12 @@ const Register = ({ register, regErr, setRegErr }) => {
   const [password, setPassword] = useState("");
  
   const submit = (ev) => {
-    if (password.length < 4){
-      setTimeout(() => setRegErr("Password must be at least 4 characters."), 3000);
-    }
     ev.preventDefault();
+    if (password.length < 4){
+      setRegErr('Password must be at least 4 characters.');
+      return; // Prevent form submission
+    }
+    
     register({ username, password });
     setRegErr(null);
   };
@@ -130,10 +132,17 @@ function App() {
       },
     });
     const json = await response.json();
+    console.log("Register Response:", json); // debugging for response 
+    
     if (response.ok) {
+      try {
       await login(credentials);
+    }catch (error){
+      setRegErr("Account registered and unable to login.");
+    }
     } else {
-      setRegErr("User Account already exists, please try again with existing account.");
+      setRegErr("User Account already exists, please login with existing credentials.");
+      console.log(json);// debugging for server-side errors
     }
   };
 
